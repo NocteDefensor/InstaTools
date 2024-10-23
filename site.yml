@@ -247,16 +247,10 @@
       when: not fgds_dir.stat.exists
 
     # Feroxbuster Installation
-    - name: Determine if system is macOS or Linux
+    - name: Determine if system is 32 or 64 bit Linux
       set_fact:
-        is_macos: "{{ ansible_facts['os_family'] == 'Darwin' }}"
         is_linux32: "{{ ansible_facts['architecture'] == 'i686' }}"
         is_linux64: "{{ ansible_facts['architecture'] == 'x86_64' }}"
-
-    - name: Set download URL for macOS
-      set_fact:
-        feroxbuster_url: "https://github.com/epi052/feroxbuster/releases/latest/download/x86_64-macos-feroxbuster.zip"
-      when: is_macos
 
     - name: Set download URL for 32-bit Linux
       set_fact:
