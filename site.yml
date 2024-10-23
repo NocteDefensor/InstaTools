@@ -128,7 +128,7 @@
 
     - name: Configure pyenv in shell profile
       blockinfile:
-        path: "{{ shell_rc_file }}"
+        path: "{{ shell_rc_file | trim }}"
         create: yes
         marker: "# {mark} ANSIBLE MANAGED BLOCK - PYENV CONFIGURATION"
         block: |
@@ -247,7 +247,7 @@
 
     - name: Add /root/.local/bin to PATH in shell profile
       blockinfile:
-        path: "{{ shell_rc_file }}"
+        path: "{{ shell_rc_file | trim }}"
         marker: "# {mark} ANSIBLE MANAGED BLOCK - ADD /root/.local/bin TO PATH"
         block: |
           export PATH=$PATH:/root/.local/bin
