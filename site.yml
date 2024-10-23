@@ -43,6 +43,22 @@
           - libpcap-dev
         state: present
 
+    - name: Install Chromium browser
+      package:
+        name: "{{ chromium_package_name }}"
+        state: present
+      vars:
+        chromium_package_name: >-
+          {{
+            {
+              'Ubuntu': 'chromium-browser',
+              'Debian': 'chromium',
+              'CentOS': 'chromium',
+              'Fedora': 'chromium',
+              'openSUSE Leap': 'chromium'
+            }[ansible_distribution] | default('chromium')
+          }}
+
     # Go Installation
     - name: Check existing Go installations
       stat:
@@ -125,7 +141,17 @@
           {% else %}
             /root/.bashrc
           {% endif %}
-
+    - name: Check for existing pyenv lines
+      lineinfile:
+        path: "{{ shell_rc_file | trim }}"
+        line: "{{ item }}"
+        state: absent
+      check_mode: yes
+      register: pyenv_check
+      with_items:
+        - 'export PYENV_ROOT="/root/.pyenv"'
+        - 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"'
+        - 'eval "$(pyenv init -)"'
     - name: Configure pyenv in shell profile
       blockinfile:
         path: "{{ shell_rc_file | trim }}"
@@ -135,6 +161,7 @@
           export PYENV_ROOT="/root/.pyenv"
           command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
           eval "$(pyenv init -)"
+      when: pyenv_check.results | map(attribute='found') | list | min == false
 
     # Install Python with pyenv using full path
     - name: Install Python version with pyenv
@@ -164,6 +191,21 @@
         - "github.com/projectdiscovery/uncover/cmd/uncover"
         - "github.com/haccer/subjack"
         - "github.com/ffuf/ffuf/v2"
+    - name: Clone TruffleHog repository
+      git:
+        repo: https://github.com/trufflesecurity/trufflehog.git
+        dest: /opt/tools/trufflehog
+        clone: yes
+        update: yes
+    
+    - name: Install TruffleHog using Go
+      environment:
+        PATH: "/usr/local/go/bin:{{ ansible_env.PATH }}"
+        GOPATH: "/root/go"
+      command: go install
+      args:
+        chdir: /opt/tools/trufflehog/
+        creates: "/root/.go/bin/trufflehog"
 
     # Python Tools and Environments
     - name: Check if Hostess-Pie directory exists
@@ -182,6 +224,16 @@
         name: colorama
         virtualenv: "{{ tools_dir }}/Hostess-Pie"
         virtualenv_command: python3 -m venv
+    - name: Check if /usr/share/seclists directory exists
+      stat:
+        path: "/usr/share/seclists"
+      register: seclists_dir
+
+    - name: Clone seclists repository
+      git:
+        repo: "https://github.com/danielmiessler/SecLists.git"
+        dest: "/usr/share/seclists"
+      when: not seclists_dir.stat.exists
 
     - name: Check if FGDS directory exists
       stat:
@@ -235,6 +287,30 @@
         mode: '0755'
         state: file
 
+    - name: Set aquatone download URL for 64-bit Linux
+      set_fact:
+        aquatone_url: "https://github.com/michenriksen/aquatone/releases/latest/download/aquatone_linux_amd64_1.7.0.zip"
+      when: is_linux64
+
+    - name: Download aquatone binary
+      get_url:
+        url: "{{ aquatone_url }}"
+        dest: "/tmp/aquatone.zip"
+        mode: '0644'
+
+    - name: Unzip aquatone binary
+      unarchive:
+        src: "/tmp/aquatone.zip"
+        dest: "/usr/local/bin"
+        remote_src: yes
+        mode: '0755'
+
+    - name: Ensure aquatone is executable
+      file:
+        path: "/usr/local/bin/aquatone"
+        mode: '0755'
+        state: file
+
     # Pipx and Related Tools
     - name: Install pipx
       environment:
@@ -245,7 +321,18 @@
         state: latest
         executable: /root/.pyenv/versions/{{ python_version }}/bin/pip3
 
+    - name: Check for existing pipx destinatinon path lines
+      lineinfile:
+        path: "{{ shell_rc_file | trim }}"
+        line: "{{ item }}"
+        state: absent
+      check_mode: yes
+      register: pipx_path_check
+      with_items:
+        - 'export PATH=$PATH:/root/.local/bin'
+
     - name: Add /root/.local/bin to PATH in shell profile
+      when: pipx_path_check.results | map(attribute='found') | list | min == false
       blockinfile:
         path: "{{ shell_rc_file | trim }}"
         marker: "# {mark} ANSIBLE MANAGED BLOCK - ADD /root/.local/bin TO PATH"
@@ -263,7 +350,6 @@
         - "bbot"
         - "git+https://github.com/EnableSecurity/wafw00f.git"
         - "git+https://github.com/Pennyw0rth/NetExec"
-
 
     # Trevor Tools Installation
     - name: Install Trevor tools
@@ -293,3 +379,7 @@
         - "/root/.local/bin/bbot"
         - "/root/.local/bin/wafw00f"
         - "/root/.local/bin/nxc"
+        - "/usr/local/bin/aquatone"
+        - "/root/go/bin/trufflehog"
+        - "/usr/share/seclists"
+        - "/usr/local/bin/feroxbuster"
