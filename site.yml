@@ -1,0 +1,294 @@
+# site.yml - Main playbook
+- name: Install Security and IT Tools
+  hosts: "{{ target_hosts | default('all') }}"
+  become: true
+  vars:
+    go_version: "1.23.2"
+    python_version: "3.11.9"
+    tools_dir: "/opt/tools"
+
+  tasks:
+    # System Preparation
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+    - name: Install system dependencies
+      package:
+        name:
+          - git
+          - curl
+          - wget
+          - build-essential
+          - python3-pip
+          - python3-venv
+          - nmap
+          - jq
+          - make
+          - libssl-dev
+          - zlib1g-dev
+          - libbz2-dev
+          - libreadline-dev
+          - libsqlite3-dev
+          - llvm
+          - libncursesw5-dev
+          - xz-utils
+          - tk-dev
+          - libxml2-dev
+          - libxmlsec1-dev
+          - libffi-dev
+          - liblzma-dev
+        state: present
+
+    # Go Installation
+    - name: Check existing Go installations
+      stat:
+        path: "{{ item }}"
+      register: go_installations
+      with_items:
+        - "/usr/local/go"
+        - "/usr/bin/go"
+        - "/usr/local/bin/go"
+
+    - name: Remove Go if installed via package manager
+      package:
+        name: golang
+        state: absent
+      when: ansible_os_family in ["Debian", "RedHat"]
+
+    - name: Remove existing Go installation directories
+      file:
+        path: "{{ item.stat.path }}"
+        state: absent
+      when: item.stat.exists
+      with_items: "{{ go_installations.results }}"
+
+    - name: Download Go
+      get_url:
+        url: "https://golang.org/dl/go{{ go_version }}.linux-amd64.tar.gz"
+        dest: "/tmp/go{{ go_version }}.linux-amd64.tar.gz"
+        mode: '0644'
+
+    - name: Extract Go
+      unarchive:
+        src: "/tmp/go{{ go_version }}.linux-amd64.tar.gz"
+        dest: /usr/local
+        remote_src: yes
+
+    - name: Set Go environment in profile
+      blockinfile:
+        path: /etc/profile
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - GO ENVIRONMENT"
+        block: |
+          export PATH=$PATH:/usr/local/go/bin
+          export GOPATH=/root/go
+          export PATH=$PATH:$GOPATH/bin
+
+    # Create tools directory
+    - name: Create tools directory
+      file:
+        path: "{{ tools_dir }}"
+        state: directory
+        mode: '0755'
+
+    # Pyenv Installation and Setup
+    - name: Download pyenv installer
+      get_url:
+        url: https://pyenv.run
+        dest: /tmp/pyenv-installer
+        mode: '0755'
+
+    - name: Execute pyenv installer
+      command: /tmp/pyenv-installer
+      args:
+        creates: /root/.pyenv
+
+    # Detect Root User's Shell
+    - name: Get root user's shell
+      shell: "getent passwd root | cut -d: -f7"
+      register: shell_output
+
+    - name: Set root_user_shell variable
+      set_fact:
+        root_user_shell: "{{ shell_output.stdout }}"
+
+    - name: Set shell_rc_file based on root user's shell
+      set_fact:
+        shell_rc_file: >-
+          {% if root_user_shell.endswith('bash') %}
+            /root/.bashrc
+          {% elif root_user_shell.endswith('zsh') %}
+            /root/.zshrc
+          {% else %}
+            /root/.bashrc
+          {% endif %}
+
+    - name: Configure pyenv in shell profile
+      blockinfile:
+        path: "{{ shell_rc_file }}"
+        create: yes
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - PYENV CONFIGURATION"
+        block: |
+          export PYENV_ROOT="/root/.pyenv"
+          command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+          eval "$(pyenv init -)"
+
+    # Install Python with pyenv using full path
+    - name: Install Python version with pyenv
+      shell: |
+        export PYENV_ROOT="/root/.pyenv"
+        export PATH="$PYENV_ROOT/bin:$PATH"
+        eval "$(/root/.pyenv/bin/pyenv init -)"
+        /root/.pyenv/bin/pyenv install {{ python_version }} -s
+        /root/.pyenv/bin/pyenv global {{ python_version }}
+      args:
+        executable: "{{ root_user_shell }}"
+        creates: "/root/.pyenv/versions/{{ python_version }}"
+
+    # Install Go-based tools
+    - name: Install Go-based tools
+      environment:
+        PATH: "/usr/local/go/bin:{{ ansible_env.PATH }}"
+        GOPATH: "/root/go"
+      command: "go install -v {{ item }}@latest"
+      args:
+        creates: "/root/go/bin/{{ item | basename }}"
+      with_items:
+        - "github.com/projectdiscovery/nuclei/v3/cmd/nuclei"
+        - "github.com/projectdiscovery/subfinder/v2/cmd/subfinder"
+        - "github.com/projectdiscovery/httpx/cmd/httpx"
+        - "github.com/projectdiscovery/naabu/v2/cmd/naabu"
+        - "github.com/projectdiscovery/uncover/cmd/uncover"
+        - "github.com/haccer/subjack"
+        - "github.com/ffuf/ffuf/v2"
+
+    # Python Tools and Environments
+    - name: Check if Hostess-Pie directory exists
+      stat:
+        path: "{{ tools_dir }}/Hostess-Pie"
+      register: hostess_pie_dir
+
+    - name: Clone Hostess-Pie repository
+      git:
+        repo: "https://github.com/burmat/Hostess-Pie.git"
+        dest: "{{ tools_dir }}/Hostess-Pie"
+      when: not hostess_pie_dir.stat.exists
+
+    - name: Setup Hostess-Pie virtual environment
+      pip:
+        name: colorama
+        virtualenv: "{{ tools_dir }}/Hostess-Pie"
+        virtualenv_command: python3 -m venv
+
+    - name: Check if FGDS directory exists
+      stat:
+        path: "{{ tools_dir }}/Fast-Google-Dorks-Scan"
+      register: fgds_dir
+
+    - name: Clone FGDS repository
+      git:
+        repo: "https://github.com/IvanGlinkin/Fast-Google-Dorks-Scan.git"
+        dest: "{{ tools_dir }}/Fast-Google-Dorks-Scan"
+      when: not fgds_dir.stat.exists
+
+    # Feroxbuster Installation
+    - name: Determine if system is macOS or Linux
+      set_fact:
+        is_macos: "{{ ansible_facts['os_family'] == 'Darwin' }}"
+        is_linux32: "{{ ansible_facts['architecture'] == 'i686' }}"
+        is_linux64: "{{ ansible_facts['architecture'] == 'x86_64' }}"
+
+    - name: Set download URL for macOS
+      set_fact:
+        feroxbuster_url: "https://github.com/epi052/feroxbuster/releases/latest/download/x86_64-macos-feroxbuster.zip"
+      when: is_macos
+
+    - name: Set download URL for 32-bit Linux
+      set_fact:
+        feroxbuster_url: "https://github.com/epi052/feroxbuster/releases/latest/download/x86-linux-feroxbuster.zip"
+      when: is_linux32
+
+    - name: Set download URL for 64-bit Linux
+      set_fact:
+        feroxbuster_url: "https://github.com/epi052/feroxbuster/releases/latest/download/x86_64-linux-feroxbuster.zip"
+      when: is_linux64
+
+    - name: Download Feroxbuster binary
+      get_url:
+        url: "{{ feroxbuster_url }}"
+        dest: "/tmp/feroxbuster.zip"
+        mode: '0644'
+
+    - name: Unzip Feroxbuster binary
+      unarchive:
+        src: "/tmp/feroxbuster.zip"
+        dest: "/usr/local/bin"
+        remote_src: yes
+        mode: '0755'
+
+    - name: Ensure Feroxbuster is executable
+      file:
+        path: "/usr/local/bin/feroxbuster"
+        mode: '0755'
+        state: file
+
+    # Pipx and Related Tools
+    - name: Install pipx
+      environment:
+        PYENV_ROOT: "/root/.pyenv"
+        PATH: "/root/.pyenv/bin:{{ ansible_env.PATH }}"
+      pip:
+        name: pipx
+        state: latest
+        executable: /root/.pyenv/versions/{{ python_version }}/bin/pip3
+
+    - name: Add /root/.local/bin to PATH in shell profile
+      blockinfile:
+        path: "{{ shell_rc_file }}"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - ADD /root/.local/bin TO PATH"
+        block: |
+          export PATH=$PATH:/root/.local/bin
+
+    - name: Install pipx-based tools
+      environment:
+        PYENV_ROOT: "/root/.pyenv"
+        PATH: "/root/.pyenv/bin:{{ ansible_env.PATH }}"
+      command: "/root/.pyenv/shims/pipx install {{ item }}"
+      args:
+        creates: "/root/.local/bin/{{ item | basename }}"
+      with_items:
+        - "bbot"
+        - "git+https://github.com/EnableSecurity/wafw00f.git"
+        - "git+https://github.com/Pennyw0rth/NetExec"
+
+
+    # Trevor Tools Installation
+    - name: Install Trevor tools
+      environment:
+        PYENV_ROOT: "/root/.pyenv"
+        PATH: "/root/.pyenv/bin:{{ ansible_env.PATH }}"
+      pip:
+        name:
+          - "git+https://github.com/blacklanternsecurity/trevorproxy"
+          - "git+https://github.com/blacklanternsecurity/trevorspray"
+        executable: /root/.pyenv/versions/{{ python_version }}/bin/pip3
+
+    # Final Verification
+    - name: Verify tool installations
+      stat:
+        path: "{{ item }}"
+      register: tool_checks
+      with_items:
+        - "/root/go/bin/nuclei"
+        - "/root/go/bin/subfinder"
+        - "/root/go/bin/httpx"
+        - "/root/go/bin/naabu"
+        - "/root/go/bin/uncover"
+        - "/root/go/bin/subjack"
+        - "/root/go/bin/ffuf"
+        - "/usr/local/bin/feroxbuster"
+        - "/root/.local/bin/bbot"
+        - "/root/.local/bin/wafw00f"
+        - "/root/.local/bin/nxc"
