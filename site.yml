@@ -40,6 +40,7 @@
           - libxmlsec1-dev
           - libffi-dev
           - liblzma-dev
+          - libpcap-dev
         state: present
 
     # Go Installation
