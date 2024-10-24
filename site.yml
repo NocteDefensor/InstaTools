@@ -8,6 +8,25 @@
     tools_dir: "/opt/tools"
 
   tasks:
+    # Detect Root User's Shell
+    - name: Get root user's shell
+      shell: "getent passwd root | cut -d: -f7"
+      register: shell_output
+
+    - name: Set root_user_shell variable
+      set_fact:
+        root_user_shell: "{{ shell_output.stdout }}"
+
+    - name: Set shell_rc_file based on root user's shell
+      set_fact:
+        shell_rc_file: >-
+          {% if root_user_shell.endswith('bash') %}
+            /root/.bashrc
+          {% elif root_user_shell.endswith('zsh') %}
+            /root/.zshrc
+          {% else %}
+            /root/.bashrc
+          {% endif %}
     # System Preparation
     - name: Update apt cache
       apt:
@@ -94,6 +113,18 @@
         dest: /usr/local
         remote_src: yes
 
+    - name: Check for existing go lines
+      lineinfile:
+        path: "{{ shell_rc_file | trim }}"
+        line: "{{ item }}"
+        state: absent
+      check_mode: yes
+      register: go_env_check
+      with_items:
+        - 'export PATH=$PATH:/usr/local/go/bin'
+        - 'export GOPATH=/root/go'
+        - 'export PATH=$PATH:$GOPATH/bin'
+        
     - name: Set Go environment in profile
       blockinfile:
         path: /etc/profile
@@ -102,6 +133,7 @@
           export PATH=$PATH:/usr/local/go/bin
           export GOPATH=/root/go
           export PATH=$PATH:$GOPATH/bin
+      when: go_env_check.results | map(attribute='found') | list | min == false
 
     # Create tools directory
     - name: Create tools directory
@@ -122,25 +154,7 @@
       args:
         creates: /root/.pyenv
 
-    # Detect Root User's Shell
-    - name: Get root user's shell
-      shell: "getent passwd root | cut -d: -f7"
-      register: shell_output
 
-    - name: Set root_user_shell variable
-      set_fact:
-        root_user_shell: "{{ shell_output.stdout }}"
-
-    - name: Set shell_rc_file based on root user's shell
-      set_fact:
-        shell_rc_file: >-
-          {% if root_user_shell.endswith('bash') %}
-            /root/.bashrc
-          {% elif root_user_shell.endswith('zsh') %}
-            /root/.zshrc
-          {% else %}
-            /root/.bashrc
-          {% endif %}
     - name: Check for existing pyenv lines
       lineinfile:
         path: "{{ shell_rc_file | trim }}"
