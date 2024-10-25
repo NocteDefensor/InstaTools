@@ -395,6 +395,10 @@
       stat:
         path: "{{ tools_dir }}/massdns"
       register: massdns_dir
+    - name: Check if massdns binary exists
+      stat:
+        path: "/usr/local/bin/massdns"
+      register: massdns_bin
 
     - name: Clone MassDNS repository
       git:
@@ -407,6 +411,7 @@
       make:
         chdir: "{{ tools_dir }}/massdns"
         target: all
+      when: not massdns_bin.stat.exists
 
     - name: Copy MassDNS binary to /usr/local/bin
       copy:
@@ -414,6 +419,7 @@
         dest: /usr/local/bin/massdns
         mode: '0755'
         remote_src: yes
+      when: not massdns_bin.stat.exists
 
     - name: Check if sqlmap directory exists
       stat:
@@ -427,22 +433,43 @@
         version: master
       when: not sqlmap_dir.stat.exists
 
+    - name: Check if metasploit framework exists
+      stat:
+        path: "/opt/metasploit-framework/msfconsole"
+      register: msfconsole_bin
+
+    - name: Remove existing MSF GPG key if present
+      file:
+        path: /usr/share/keyrings/metasploit-framework.gpg
+        state: absent
+      when: not msfconsole_bin.stat.exists
     - name: Download MSF installer
       get_url:
         url: https://raw.githubusercontent.com/rapid7/metasploit-omnibus/master/config/templates/metasploit-framework-wrappers/msfupdate.erb
         dest: /root/msfinstall
         mode: '0755'
+      when: not msfconsole_bin.stat.exists
 
     - name: Run MSF installer
       command: /root/msfinstall
       args:
         creates: /opt/metasploit-framework/msfconsole
       register: msf_install
+      when: not msfconsole_bin.stat.exists
       
     - name: Clean up installer
       file:
         path: /root/msfinstall
         state: absent
+    - name: Check for existing metasploit lines
+      lineinfile:
+        path: "{{ shell_rc_file | trim }}"
+        line: "{{ item }}"
+        state: absent
+      check_mode: yes
+      register: msf_env_check
+      with_items:
+        - 'export PATH=$PATH:/opt/metasploit-framework/bin'
 
     - name: Add Metasploit bin to PATH in shell profile
       blockinfile:
@@ -450,6 +477,7 @@
         marker: "# {mark} ANSIBLE MANAGED BLOCK - ADD METASPLOIT BIN TO PATH"
         block: |
           export PATH=$PATH:/opt/metasploit-framework/bin
+      when: msf_env_check.results | map(attribute='found') | list | min == false
 
     # Install TMUX Config and logging
     - name: Create TMux logging directory
@@ -569,3 +597,4 @@
         - "/usr/local/bin/massdns"
         - "/opt/tools/sqlmap"
         - "/opt/metasploit-framework/bin/msfconsole"
+        - "/root/go/bin/gowitness"
