@@ -219,6 +219,7 @@
         - "github.com/projectdiscovery/alterx/cmd/alterx"
         - "github.com/haccer/subjack"
         - "github.com/ffuf/ffuf/v2"
+        - "github.com/sensepost/gowitness"
     - name: Check if trufflehog directory exists
       stat:
         path: "{{ tools_dir }}/trufflehog"
