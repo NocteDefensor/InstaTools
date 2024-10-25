@@ -414,6 +414,42 @@
         mode: '0755'
         remote_src: yes
 
+    - name: Check if sqlmap directory exists
+      stat:
+        path: "{{ tools_dir }}/sqlmap"
+      register: sqlmap_dir
+
+    - name: Clone sqlmap repository
+      git:
+        repo: "https://github.com/sqlmapproject/sqlmap.git"
+        dest: "{{ tools_dir }}/sqlmap"
+        version: master
+      when: not sqlmap_dir.stat.exists
+
+    - name: Download MSF installer
+      get_url:
+        url: https://raw.githubusercontent.com/rapid7/metasploit-omnibus/master/config/templates/metasploit-framework-wrappers/msfupdate.erb
+        dest: /root/msfinstall
+        mode: '0755'
+
+    - name: Run MSF installer
+      command: /root/msfinstall
+      args:
+        creates: /opt/metasploit-framework/msfconsole
+      register: msf_install
+      
+    - name: Clean up installer
+      file:
+        path: /root/msfinstall
+        state: absent
+
+    - name: Add Metasploit bin to PATH in shell profile
+      blockinfile:
+        path: "{{ shell_rc_file | trim }}"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - ADD METASPLOIT BIN TO PATH"
+        block: |
+          export PATH=$PATH:/opt/metasploit-framework/bin
+
     # Install TMUX Config and logging
     - name: Create TMux logging directory
       file:
@@ -530,3 +566,5 @@
         - "/usr/share/seclists"
         - "/usr/local/bin/feroxbuster"
         - "/usr/local/bin/massdns"
+        - "/opt/tools/sqlmap"
+        - "/opt/metasploit-framework/bin/msfconsole"
