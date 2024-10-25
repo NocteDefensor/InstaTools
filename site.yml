@@ -1,4 +1,5 @@
 # site.yml - Main playbook
+---
 - name: Install Security and IT Tools
   hosts: "{{ target_hosts | default('all') }}"
   become: true
@@ -6,6 +7,9 @@
     go_version: "1.23.2"
     python_version: "3.11.9"
     tools_dir: "/opt/tools"
+    tmux_log_path: /root/logs/tmux
+    tpm_path: /root/.tmux/plugins/tpm
+    tmuxinator_config_path: /root/.config/tmuxinator
 
   tasks:
     # Detect Root User's Shell
@@ -27,6 +31,9 @@
           {% else %}
             /root/.bashrc
           {% endif %}
+
+    # Install Tmux config and Tmux logging
+
     # System Preparation
     - name: Update apt cache
       apt:
@@ -60,6 +67,8 @@
           - libffi-dev
           - liblzma-dev
           - libpcap-dev
+          - ruby
+          - tmux
         state: present
 
     - name: Install Chromium browser
@@ -210,12 +219,18 @@
         - "github.com/projectdiscovery/alterx/cmd/alterx"
         - "github.com/haccer/subjack"
         - "github.com/ffuf/ffuf/v2"
+    - name: Check if trufflehog directory exists
+      stat:
+        path: "{{ tools_dir }}/trufflehog"
+      register: trufflehog_dir
+
     - name: Clone TruffleHog repository
       git:
         repo: https://github.com/trufflesecurity/trufflehog.git
         dest: /opt/tools/trufflehog
         clone: yes
         update: yes
+      when: not trufflehog_dir.stat.exists
     
     - name: Install TruffleHog using Go
       environment:
@@ -375,6 +390,119 @@
           - "git+https://github.com/blacklanternsecurity/trevorspray"
         executable: /root/.pyenv/versions/{{ python_version }}/bin/pip3
 
+    - name: Check if massdns directory exists
+      stat:
+        path: "{{ tools_dir }}/massdns"
+      register: massdns_dir
+
+    - name: Clone MassDNS repository
+      git:
+        repo: "https://github.com/blechschmidt/massdns.git"
+        dest: "{{ tools_dir }}/massdns"
+        version: master
+      when: not massdns_dir.stat.exists
+
+    - name: Build MassDNS
+      make:
+        chdir: "{{ tools_dir }}/massdns"
+        target: all
+
+    - name: Copy MassDNS binary to /usr/local/bin
+      copy:
+        src: "{{ tools_dir }}/massdns/bin/massdns"
+        dest: /usr/local/bin/massdns
+        mode: '0755'
+        remote_src: yes
+
+    # Install TMUX Config and logging
+    - name: Create TMux logging directory
+      file:
+        path: "{{ tmux_log_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create TMux config directory
+      file:
+        path: /root/.tmux
+        state: directory
+        mode: '0755'
+
+    - name: Configure TMux
+      copy:
+        dest: /root/.tmux.conf
+        content: |
+          set-option -g default-shell {{ shell_output.stdout }}
+          set -g @plugin 'tmux-plugins/tmux-logging'
+          set -g @plugin 'tmux-plugins/tpm'
+          set -g @plugin 'tmux-plugins/tmux-sensible'
+          set -g history-limit 250000
+          set -g allow-rename off
+          set -g escape-time 50
+          set-window-option -g mode-keys vi
+          run '{{ tpm_path }}/tpm'
+          run '{{ tpm_path }}/tmux-logging/logging.tmux'
+          run '{{ tpm_path }}/tmux-logging/scripts/toggle_logging.sh'
+          bind-key "c" new-window \; run-shell "{{ tpm_path }}/tmux-logging/scripts/toggle_logging.sh"
+          bind-key '"' split-window \; run-shell "{{ tpm_path }}/tmux-logging/scripts/toggle_logging.sh"
+          bind-key "%" split-window -h \; run-shell "{{ tpm_path }}/tmux-logging/scripts/toggle_logging.sh"
+        mode: '0644'
+
+    - name: Remove existing TPM if present
+      file:
+        path: "{{ tpm_path }}"
+        state: absent
+
+    - name: Clone TPM repository
+      git:
+        repo: https://github.com/tmux-plugins/tpm.git
+        dest: "{{ tpm_path }}"
+        version: master
+
+    - name: Install TMux plugins
+      command: /bin/bash {{ tpm_path }}/scripts/install_plugins.sh
+      args:
+        creates: "{{ tpm_path }}/tmux-logging"
+
+    - name: Update logging path in variables.sh
+      replace:
+        path: "/root/.tmux/plugins/tmux-logging/scripts/variables.sh"
+        regexp: 'default_logging_path="\$HOME"'
+        replace: 'default_logging_path="{{ tmux_log_path }}"'
+
+    - name: Initialize TMux session
+      command: tmux new-session -d
+      args:
+        creates: /tmp/tmux-0
+      changed_when: false
+      
+    - name: Source TMux configuration
+      command: tmux source-file /root/.tmux.conf
+      register: source_result
+      changed_when: source_result.rc == 0
+      failed_when: false
+
+    - name: Install Tmuxinator
+      gem:
+        name: tmuxinator
+        state: present
+        user_install: no
+
+    - name: Create Tmuxinator config directory
+      file:
+        path: "{{ tmuxinator_config_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Configure Tmuxinator
+      copy:
+        dest: "{{ tmuxinator_config_path }}/default.yml"
+        content: |
+          name: default
+          root: ~/
+          windows:
+              - main: tmux source /root/.tmux.conf
+              - msf: msfconsole
+        mode: '0644'
     # Final Verification
     - name: Verify tool installations
       stat:
@@ -401,3 +529,4 @@
         - "/root/go/bin/trufflehog"
         - "/usr/share/seclists"
         - "/usr/local/bin/feroxbuster"
+        - "/usr/local/bin/massdns"
