@@ -1,0 +1,64 @@
+# roles/cleanup/tasks/main.yml
+---
+# Check temporary files existence
+- name: Check temporary files existence
+  stat:
+    path: "{{ item }}"
+  register: temp_files
+  with_items:
+    - "/tmp/aquatone.zip"
+    - "/tmp/feroxbuster.zip"
+    - "/tmp/go{{ go_version }}.linux-amd64.tar.gz"
+    - "/tmp/pyenv-installer"
+
+# Cleanup temporary downloaded files
+- name: Remove temporary downloaded files
+  file:
+    path: "{{ item.stat.path }}"
+    state: absent
+  when: item.stat.exists
+  with_items: "{{ temp_files.results }}"
+
+# Check build directories existence
+- name: Check build directories existence
+  stat:
+    path: "{{ item }}"
+  register: build_dirs
+  with_items:
+    - "{{ tools_dir }}/massdns"
+    - "{{ tools_dir }}/trufflehog"
+
+# Additional verification before removing build directories
+- name: Verify successful tool installation before cleanup
+  block:
+    - name: Check massdns binary
+      stat:
+        path: "/usr/local/bin/massdns"
+      register: massdns_binary
+      when: "'{{ tools_dir }}/massdns' in item.stat.path"
+
+    - name: Check trufflehog binary
+      stat:
+        path: "/root/go/bin/trufflehog"
+      register: trufflehog_binary
+      when: "'{{ tools_dir }}/trufflehog' in item.stat.path"
+  with_items: "{{ build_dirs.results }}"
+
+# Cleanup build directories only if binaries exist
+- name: Remove build directories
+  file:
+    path: "{{ item.stat.path }}"
+    state: absent
+  when: 
+    - item.stat.exists
+    - >
+      (item.stat.path == '{{ tools_dir }}/massdns' and massdns_binary.stat.exists) or
+      (item.stat.path == '{{ tools_dir }}/trufflehog' and trufflehog_binary.stat.exists)
+  with_items: "{{ build_dirs.results }}"
+
+# Add cleanup success notification
+- name: Notify about cleanup completion
+  debug:
+    msg: "Cleanup completed successfully. Removed existing temporary files and verified build directories."
+  when: temp_files.results|selectattr('stat.exists')|list|length > 0 or 
+        build_dirs.results|selectattr('stat.exists')|list|length > 0

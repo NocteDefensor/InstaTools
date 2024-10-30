@@ -1,4 +1,25 @@
 ---
+# Gather Facts
+
+- name: Get root user's shell
+  shell: "getent passwd root | cut -d: -f7"
+  register: shell_output
+
+- name: Set root_user_shell variable
+  set_fact:
+    root_user_shell: "{{ shell_output.stdout }}"
+
+- name: Set shell_rc_file based on root user's shell
+  set_fact:
+    shell_rc_file: >-
+      {% if root_user_shell.endswith('bash') %}
+        /root/.bashrc
+      {% elif root_user_shell.endswith('zsh') %}
+        /root/.zshrc
+      {% else %}
+        /root/.bashrc
+      {% endif %}
+# Install Tools
 - name: Install Security and IT Tools
   hosts: "{{ target_hosts | default('all') }}"
   become: true
@@ -10,6 +31,15 @@
     tmux_log_path: /root/logs/tmux
     tpm_path: /root/.tmux/plugins/tpm
     tmuxinator_config_path: /root/.config/tmuxinator
+    selected_roles: [
+      'environment_prep',
+      'go_tools',
+      'pipx_tools',
+      'miscellaneous',
+      'metasploit',
+      'seclists',
+      'cleanup'
+    ]
 
   roles:
     - role: environment_prep
@@ -35,3 +65,7 @@
     - role: seclists
       when: "'seclists' in selected_roles"
       tags: ['seclists']
+    
+    - role: cleanup
+      when: "'cleanup' in selected_roles"
+      tags: ['cleanup']

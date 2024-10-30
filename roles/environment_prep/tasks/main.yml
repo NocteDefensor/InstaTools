@@ -1,25 +1,5 @@
 # roles/environment_prep/tasks/main.yml
 ---
-# Shell Detection
-- name: Get root user's shell
-  shell: "getent passwd root | cut -d: -f7"
-  register: shell_output
-
-- name: Set root_user_shell variable
-  set_fact:
-    root_user_shell: "{{ shell_output.stdout }}"
-
-- name: Set shell_rc_file based on root user's shell
-  set_fact:
-    shell_rc_file: >-
-      {% if root_user_shell.endswith('bash') %}
-        /root/.bashrc
-      {% elif root_user_shell.endswith('zsh') %}
-        /root/.zshrc
-      {% else %}
-        /root/.bashrc
-      {% endif %}
-
 # System Preparation
 - name: Update apt cache
   apt:
@@ -203,6 +183,12 @@
     block: |
       export PATH=$PATH:/root/.local/bin
   when: pipx_path_check.results | map(attribute='found') | list | min == false
+
+- name: Rehash pyenv shims after installing pipx
+  shell: pyenv rehash
+  environment:
+    PYENV_ROOT: "/root/.pyenv"
+    PATH: "/root/.pyenv/bin:{{ ansible_env.PATH }}"
 
 # TMux and Tmuxinator Setup
 - name: Create TMux logging directory
