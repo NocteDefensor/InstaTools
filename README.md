@@ -12,7 +12,7 @@ An Ansible playbook for automated installation and configuration of various secu
     ├── environment_prep/
     ├── go_tools/
     ├── pipx_tools/
-    ├── miscellaneous/
+    ├── misc_tools/
     ├── metasploit/
     ├── seclists/
     └── cleanup/
@@ -48,7 +48,7 @@ Installs Python-based tools using pipx:
 - NetExec (formerly CrackMapExec)
 - Tag: `pipx_tools`
 
-### miscellaneous
+### misc_tools
 Various security tools:
 - Feroxbuster for web content discovery
 - MassDNS for DNS resolving
@@ -56,7 +56,7 @@ Various security tools:
 - SQLMap for SQL injection testing
 - Fast Google Dorks Scan (FGDS)
 - Trevor tools (trevorproxy, trevorspray)
-- Tag: `miscellaneous`
+- Tag: `misc_tools`
 
 ### metasploit
 Installs and configures Metasploit Framework:
