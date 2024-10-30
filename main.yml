@@ -1,24 +1,4 @@
 ---
-# Gather Facts
-
-- name: Get root user's shell
-  shell: "getent passwd root | cut -d: -f7"
-  register: shell_output
-
-- name: Set root_user_shell variable
-  set_fact:
-    root_user_shell: "{{ shell_output.stdout }}"
-
-- name: Set shell_rc_file based on root user's shell
-  set_fact:
-    shell_rc_file: >-
-      {% if root_user_shell.endswith('bash') %}
-        /root/.bashrc
-      {% elif root_user_shell.endswith('zsh') %}
-        /root/.zshrc
-      {% else %}
-        /root/.bashrc
-      {% endif %}
 # Install Tools
 - name: Install Security and IT Tools
   hosts: "{{ target_hosts | default('all') }}"
@@ -40,6 +20,26 @@
       'seclists',
       'cleanup'
     ]
+
+  pre_tasks:
+    - name: Get root user's shell
+      shell: "getent passwd root | cut -d: -f7"
+      register: shell_output
+
+    - name: Set root_user_shell variable
+      set_fact:
+        root_user_shell: "{{ shell_output.stdout }}"
+
+    - name: Set shell_rc_file based on root user's shell
+      set_fact:
+        shell_rc_file: >-
+          {% if root_user_shell.endswith('bash') %}
+            /root/.bashrc
+          {% elif root_user_shell.endswith('zsh') %}
+            /root/.zshrc
+          {% else %}
+            /root/.bashrc
+          {% endif %}
 
   roles:
     - role: environment_prep
