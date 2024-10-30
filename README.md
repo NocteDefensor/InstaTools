@@ -1,6 +1,6 @@
 # InstaTools
 
-An Ansible playbook for automated installation and configuration of various security testing tools. This playbook sets up a complete security testing environment with various tools organized into specific roles.
+An Ansible playbook for automated installation and configuration of various security testing tools. This playbook aims to set up a complete security testing environment with various tools organized into specific roles. Currently, the roles are oriented towards tooling used on external engagements. This will be expanded upon.
 
 ## Structure
 ```
