@@ -1,0 +1,49 @@
+# roles/metasploit/tasks/main.yml
+---
+- name: Check if metasploit framework exists
+  stat:
+    path: "/opt/metasploit-framework/msfconsole"
+  register: msfconsole_bin
+
+- name: Remove existing MSF GPG key if present
+  file:
+    path: /usr/share/keyrings/metasploit-framework.gpg
+    state: absent
+  when: not msfconsole_bin.stat.exists
+
+- name: Download MSF installer
+  get_url:
+    url: https://raw.githubusercontent.com/rapid7/metasploit-omnibus/master/config/templates/metasploit-framework-wrappers/msfupdate.erb
+    dest: /root/msfinstall
+    mode: '0755'
+  when: not msfconsole_bin.stat.exists
+
+- name: Run MSF installer
+  command: /root/msfinstall
+  args:
+    creates: /opt/metasploit-framework/msfconsole
+  register: msf_install
+  when: not msfconsole_bin.stat.exists
+
+- name: Clean up installer
+  file:
+    path: /root/msfinstall
+    state: absent
+
+- name: Check for existing metasploit lines
+  lineinfile:
+    path: "{{ shell_rc_file | trim }}"
+    line: "{{ item }}"
+    state: absent
+  check_mode: yes
+  register: msf_env_check
+  with_items:
+    - 'export PATH=$PATH:/opt/metasploit-framework/bin'
+
+- name: Add Metasploit bin to PATH in shell profile
+  blockinfile:
+    path: "{{ shell_rc_file | trim }}"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - ADD METASPLOIT BIN TO PATH"
+    block: |
+      export PATH=$PATH:/opt/metasploit-framework/bin
+  when: msf_env_check.results | map(attribute='found') | list | min == false

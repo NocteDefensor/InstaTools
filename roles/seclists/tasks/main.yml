@@ -1,0 +1,12 @@
+# roles/seclists/tasks/main.yml
+---
+- name: Check if SecLists directory exists
+  stat:
+    path: "/usr/share/seclists"
+  register: seclists_dir
+
+- name: Clone SecLists repository
+  git:
+    repo: "https://github.com/danielmiessler/SecLists.git"
+    dest: "/usr/share/seclists"
+  when: not seclists_dir.stat.exists

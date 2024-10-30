@@ -1,0 +1,83 @@
+# roles/go_tools/tasks/main.yml
+---
+- name: Create tools directory
+  file:
+    path: "{{ tools_dir }}"
+    state: directory
+    mode: '0755'
+
+# Main Go Tools Installation
+- name: Install Go-based tools
+  environment:
+    PATH: "/usr/local/go/bin:{{ ansible_env.PATH }}"
+    GOPATH: "/root/go"
+  command: "go install -v {{ item }}@latest"
+  args:
+    creates: "/root/go/bin/{{ item | basename }}"
+  with_items:
+    - "github.com/projectdiscovery/nuclei/v3/cmd/nuclei"
+    - "github.com/projectdiscovery/subfinder/v2/cmd/subfinder"
+    - "github.com/projectdiscovery/httpx/cmd/httpx"
+    - "github.com/projectdiscovery/naabu/v2/cmd/naabu"
+    - "github.com/projectdiscovery/uncover/cmd/uncover"
+    - "github.com/projectdiscovery/shuffledns/cmd/shuffledns"
+    - "github.com/projectdiscovery/dnsx/cmd/dnsx"
+    - "github.com/projectdiscovery/cdncheck/cmd/cdncheck"
+    - "github.com/projectdiscovery/tldfinder/cmd/tldfinder"
+    - "github.com/projectdiscovery/alterx/cmd/alterx"
+    - "github.com/haccer/subjack"
+    - "github.com/ffuf/ffuf/v2"
+    - "github.com/sensepost/gowitness"
+
+# TruffleHog Installation
+- name: Check if trufflehog directory exists
+  stat:
+    path: "{{ tools_dir }}/trufflehog"
+  register: trufflehog_dir
+
+- name: Clone TruffleHog repository
+  git:
+    repo: https://github.com/trufflesecurity/trufflehog.git
+    dest: "{{ tools_dir }}/trufflehog"
+    clone: yes
+    update: yes
+  when: not trufflehog_dir.stat.exists
+
+- name: Install TruffleHog using Go
+  environment:
+    PATH: "/usr/local/go/bin:{{ ansible_env.PATH }}"
+    GOPATH: "/root/go"
+  command: go install
+  args:
+    chdir: "{{ tools_dir }}/trufflehog/"
+    creates: "/root/go/bin/trufflehog"
+
+# Aquatone Installation
+- name: Determine if system is 32 or 64 bit Linux
+  set_fact:
+    is_linux32: "{{ ansible_facts['architecture'] == 'i686' }}"
+    is_linux64: "{{ ansible_facts['architecture'] == 'x86_64' }}"
+
+- name: Set aquatone download URL for 64-bit Linux
+  set_fact:
+    aquatone_url: "https://github.com/michenriksen/aquatone/releases/latest/download/aquatone_linux_amd64_1.7.0.zip"
+  when: is_linux64
+
+- name: Download aquatone binary
+  get_url:
+    url: "{{ aquatone_url }}"
+    dest: "/tmp/aquatone.zip"
+    mode: '0644'
+
+- name: Unzip aquatone binary
+  unarchive:
+    src: "/tmp/aquatone.zip"
+    dest: "/usr/local/bin"
+    remote_src: yes
+    mode: '0755'
+
+- name: Ensure aquatone is executable
+  file:
+    path: "/usr/local/bin/aquatone"
+    mode: '0755'
+    state: file

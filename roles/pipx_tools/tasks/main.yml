@@ -1,0 +1,15 @@
+# roles/pipx_tools/tasks/main.yml
+---
+# Install pipx-based tools
+- name: Install pipx-based tools
+  environment:
+    PYENV_ROOT: "/root/.pyenv"
+    PATH: "/root/.pyenv/shims:/root/.pyenv/bin:{{ ansible_env.PATH }}"
+  command: "/root/.pyenv/shims/pipx install {{ item }}"
+  args:
+    creates: "/root/.local/bin/{{ item | basename }}"
+  with_items:
+    - "bbot"
+    - "git+https://github.com/EnableSecurity/wafw00f.git"
+    - "git+https://github.com/Pennyw0rth/NetExec"
+

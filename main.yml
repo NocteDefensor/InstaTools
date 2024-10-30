@@ -1,0 +1,37 @@
+---
+- name: Install Security and IT Tools
+  hosts: "{{ target_hosts | default('all') }}"
+  become: true
+
+  vars:
+    go_version: "1.23.2"
+    python_version: "3.11.9"
+    tools_dir: "/opt/tools"
+    tmux_log_path: /root/logs/tmux
+    tpm_path: /root/.tmux/plugins/tpm
+    tmuxinator_config_path: /root/.config/tmuxinator
+
+  roles:
+    - role: environment_prep
+      when: "'environment_prep' in selected_roles"
+      tags: ['environment_prep']
+    
+    - role: go_tools
+      when: "'go_tools' in selected_roles"
+      tags: ['go_tools']
+    
+    - role: pipx_tools
+      when: "'pipx_tools' in selected_roles"
+      tags: ['pipx_tools']
+    
+    - role: miscellaneous
+      when: "'miscellaneous' in selected_roles"
+      tags: ['miscellaneous']
+    
+    - role: metasploit
+      when: "'metasploit' in selected_roles"
+      tags: ['metasploit']
+    
+    - role: seclists
+      when: "'seclists' in selected_roles"
+      tags: ['seclists']
