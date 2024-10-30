@@ -15,7 +15,7 @@
       'environment_prep',
       'go_tools',
       'pipx_tools',
-      'miscellaneous',
+      'misc_tools',
       'metasploit',
       'seclists',
       'cleanup'
@@ -54,9 +54,9 @@
       when: "'pipx_tools' in selected_roles"
       tags: ['pipx_tools']
     
-    - role: miscellaneous
-      when: "'miscellaneous' in selected_roles"
-      tags: ['miscellaneous']
+    - role: misc_tools
+      when: "'misc_tools' in selected_roles"
+      tags: ['misc_tools']
     
     - role: metasploit
       when: "'metasploit' in selected_roles"
