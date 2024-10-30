@@ -19,6 +19,7 @@
   when: item.stat.exists
   with_items: "{{ temp_files.results }}"
 
+# Define build directories and corresponding binaries
 - name: Define build directories and corresponding binaries
   set_fact:
     build_items:
@@ -27,22 +28,36 @@
       - dir: "{{ tools_dir }}/trufflehog"
         binary: "/root/go/bin/trufflehog"
 
+# Remove build directories if corresponding binaries exist
 - name: Remove build directories if corresponding binaries exist
-  file:
-    path: "{{ item.dir }}"
-    state: absent
-  when:
-    - lookup('ansible.builtin.stat', item.dir, get_attributes=False).stat.exists
-    - lookup('ansible.builtin.stat', item.binary, get_attributes=False).stat.exists
+  block:
+    - name: Check if build directory exists
+      stat:
+        path: "{{ item.dir }}"
+      register: dir_stat
+
+    - name: Check if corresponding binary exists
+      stat:
+        path: "{{ item.binary }}"
+      register: binary_stat
+
+    - name: Remove build directory
+      file:
+        path: "{{ item.dir }}"
+        state: absent
+      when:
+        - dir_stat.stat.exists
+        - binary_stat.stat.exists
   loop: "{{ build_items }}"
   loop_control:
     loop_var: item
 
+# Add cleanup success notification
 - name: Notify about cleanup completion
   debug:
     msg: "Cleanup completed successfully. Removed existing temporary files and verified build directories."
   when:
     - temp_files.results | selectattr('stat.exists') | list | length > 0
-    - build_items | selectattr('dir', 'in', removed_dirs) | list | length > 0
+    - removed_dirs | length > 0
   vars:
     removed_dirs: "{{ build_items | map(attribute='dir') | list }}"
