@@ -20,7 +20,7 @@
   with_items: "{{ temp_files.results }}"
 
 - name: Define build directories and corresponding binaries
-  vars:
+  set_fact:
     build_items:
       - dir: "{{ tools_dir }}/massdns"
         binary: "/usr/local/bin/massdns"
