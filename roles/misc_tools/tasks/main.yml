@@ -7,39 +7,46 @@
     mode: '0755'
 
 # Feroxbuster Installation
-- name: Determine if system is 32 or 64 bit Linux
-  set_fact:
-    is_linux32: "{{ ansible_facts['architecture'] == 'i686' }}"
-    is_linux64: "{{ ansible_facts['architecture'] == 'x86_64' }}"
-
-- name: Set download URL for 32-bit Linux
-  set_fact:
-    feroxbuster_url: "https://github.com/epi052/feroxbuster/releases/latest/download/x86-linux-feroxbuster.zip"
-  when: is_linux32
-
-- name: Set download URL for 64-bit Linux
-  set_fact:
-    feroxbuster_url: "https://github.com/epi052/feroxbuster/releases/latest/download/x86_64-linux-feroxbuster.zip"
-  when: is_linux64
-
-- name: Download Feroxbuster binary
-  get_url:
-    url: "{{ feroxbuster_url }}"
-    dest: "/tmp/feroxbuster.zip"
-    mode: '0644'
-
-- name: Unzip Feroxbuster binary
-  unarchive:
-    src: "/tmp/feroxbuster.zip"
-    dest: "/usr/local/bin"
-    remote_src: yes
-    mode: '0755'
-
-- name: Ensure Feroxbuster is executable
-  file:
+- name: Check if feroxbuster binary exists
+  stat:
     path: "/usr/local/bin/feroxbuster"
-    mode: '0755'
-    state: file
+  register: feroxbuster_bin
+
+- block:
+    - name: Determine if system is 32 or 64 bit Linux
+      set_fact:
+        is_linux32: "{{ ansible_facts['architecture'] == 'i686' }}"
+        is_linux64: "{{ ansible_facts['architecture'] == 'x86_64' }}"
+
+    - name: Set download URL for 32-bit Linux
+      set_fact:
+        feroxbuster_url: "https://github.com/epi052/feroxbuster/releases/latest/download/x86-linux-feroxbuster.zip"
+      when: is_linux32
+
+    - name: Set download URL for 64-bit Linux
+      set_fact:
+        feroxbuster_url: "https://github.com/epi052/feroxbuster/releases/latest/download/x86_64-linux-feroxbuster.zip"
+      when: is_linux64
+
+    - name: Download Feroxbuster binary
+      get_url:
+        url: "{{ feroxbuster_url }}"
+        dest: "/tmp/feroxbuster.zip"
+        mode: '0644'
+
+    - name: Unzip Feroxbuster binary
+      unarchive:
+        src: "/tmp/feroxbuster.zip"
+        dest: "/usr/local/bin"
+        remote_src: yes
+        mode: '0755'
+
+    - name: Ensure Feroxbuster is executable
+      file:
+        path: "/usr/local/bin/feroxbuster"
+        mode: '0755'
+        state: file
+  when: not feroxbuster_bin.stat.exists
 
 # MassDNS
 - name: Check if massdns directory exists
@@ -52,25 +59,25 @@
     path: "/usr/local/bin/massdns"
   register: massdns_bin
 
-- name: Clone MassDNS repository
-  git:
-    repo: "https://github.com/blechschmidt/massdns.git"
-    dest: "{{ tools_dir }}/massdns"
-    version: master
-  when: not massdns_dir.stat.exists
+- block:
+    - name: Clone MassDNS repository
+      git:
+        repo: "https://github.com/blechschmidt/massdns.git"
+        dest: "{{ tools_dir }}/massdns"
+        version: master
+      when: not massdns_dir.stat.exists
 
-- name: Build MassDNS
-  make:
-    chdir: "{{ tools_dir }}/massdns"
-    target: all
-  when: not massdns_bin.stat.exists
+    - name: Build MassDNS
+      make:
+        chdir: "{{ tools_dir }}/massdns"
+        target: all
 
-- name: Copy MassDNS binary to /usr/local/bin
-  copy:
-    src: "{{ tools_dir }}/massdns/bin/massdns"
-    dest: /usr/local/bin/massdns
-    mode: '0755'
-    remote_src: yes
+    - name: Copy MassDNS binary to /usr/local/bin
+      copy:
+        src: "{{ tools_dir }}/massdns/bin/massdns"
+        dest: /usr/local/bin/massdns
+        mode: '0755'
+        remote_src: yes
   when: not massdns_bin.stat.exists
 
 # Hostess-Pie
