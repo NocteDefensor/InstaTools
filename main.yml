@@ -3,6 +3,7 @@
 - name: Install Security and IT Tools
   hosts: "{{ target_hosts | default('all') }}"
   become: true
+  gather_facts: true
 
   vars:
     go_version: "1.23.2"
@@ -25,12 +26,15 @@
     - name: Get root user's shell
       shell: "getent passwd root | cut -d: -f7"
       register: shell_output
+      tags: always
 
     - name: Set root_user_shell variable
+      tags: always
       set_fact:
         root_user_shell: "{{ shell_output.stdout }}"
 
     - name: Set shell_rc_file based on root user's shell
+      tags: always
       set_fact:
         shell_rc_file: >-
           {% if root_user_shell.endswith('bash') %}
