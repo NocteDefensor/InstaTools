@@ -61,6 +61,9 @@
 
 # Clean Go cache and dependencies
 - name: Clean Go caches
+  environment:
+    PATH: "/usr/local/go/bin:{{ ansible_env.PATH }}"
+    GOPATH: "/root/go"
   command: go clean -cache -modcache -testcache
   register: go_clean_result
   failed_when: go_clean_result.stderr != "" and go_clean_result.rc != 0
