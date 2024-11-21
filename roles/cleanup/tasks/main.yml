@@ -59,10 +59,16 @@
     loop_var: item
     index_var: item_index
 
-# Add cleanup success notification
+# Clean Go cache and dependencies
+- name: Clean Go caches
+  command: go clean -cache -modcache -testcache
+  register: go_clean_result
+  failed_when: go_clean_result.stderr != "" and go_clean_result.rc != 0
+
+# Update the completion notification
 - name: Notify about cleanup completion
   debug:
-    msg: "Cleanup completed successfully. Removed existing temporary files and verified build directories."
+    msg: "Cleanup completed successfully. Removed existing temporary files, verified build directories, and cleaned Go caches."
   when:
     - temp_files.results | selectattr('stat.exists') | list | length > 0
     - dir_stat.results | selectattr('stat.exists') | list | length > 0
