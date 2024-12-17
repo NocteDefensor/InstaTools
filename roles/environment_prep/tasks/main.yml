@@ -192,6 +192,12 @@
     PATH: "/root/.pyenv/bin:{{ ansible_env.PATH }}"
 
 # TMux and Tmuxinator Setup
+- name: Install Tmuxinator
+  gem:
+    name: tmuxinator
+    state: present
+    user_install: no
+
 - name: Create TMux logging directory
   file:
     path: "{{ tmux_log_path }}"
@@ -204,25 +210,11 @@
     state: directory
     mode: '0755'
 
-- name: Configure TMux
-  copy:
-    dest: /root/.tmux.conf
-    content: |
-      set-option -g default-shell {{ shell_output.stdout }}
-      set -g @plugin 'tmux-plugins/tmux-logging'
-      set -g @plugin 'tmux-plugins/tpm'
-      set -g @plugin 'tmux-plugins/tmux-sensible'
-      set -g history-limit 250000
-      set -g allow-rename off
-      set -g escape-time 50
-      set-window-option -g mode-keys vi
-      run '{{ tpm_path }}/tpm'
-      run '{{ tpm_path }}/tmux-logging/logging.tmux'
-      run '{{ tpm_path }}/tmux-logging/scripts/toggle_logging.sh'
-      bind-key "c" new-window \; run-shell "{{ tpm_path }}/tmux-logging/scripts/toggle_logging.sh"
-      bind-key '"' split-window \; run-shell "{{ tpm_path }}/tmux-logging/scripts/toggle_logging.sh"
-      bind-key "%" split-window -h \; run-shell "{{ tpm_path }}/tmux-logging/scripts/toggle_logging.sh"
-    mode: '0644'
+- name: Create Tmuxinator config directory
+  file:
+    path: "{{ tmuxinator_config_path }}"
+    state: directory
+    mode: '0755'
 
 - name: Remove existing TPM if present
   file:
@@ -246,6 +238,26 @@
     regexp: 'default_logging_path="\$HOME"'
     replace: 'default_logging_path="{{ tmux_log_path }}"'
 
+- name: Configure TMux
+  copy:
+    dest: /root/.tmux.conf
+    content: |
+      set-option -g default-shell {{ shell_output.stdout }}
+      set -g @plugin 'tmux-plugins/tmux-logging'
+      set -g @plugin 'tmux-plugins/tpm'
+      set -g @plugin 'tmux-plugins/tmux-sensible'
+      set -g history-limit 250000
+      set -g allow-rename off
+      set -g escape-time 50
+      set-window-option -g mode-keys vi
+      run '{{ tpm_path }}/tpm'
+      run '{{ tpm_path }}/tmux-logging/logging.tmux'
+      run '{{ tpm_path }}/tmux-logging/scripts/toggle_logging.sh'
+      bind-key "c" new-window \; run-shell "{{ tpm_path }}/tmux-logging/scripts/toggle_logging.sh"
+      bind-key '"' split-window \; run-shell "{{ tpm_path }}/tmux-logging/scripts/toggle_logging.sh"
+      bind-key "%" split-window -h \; run-shell "{{ tpm_path }}/tmux-logging/scripts/toggle_logging.sh"
+    mode: '0644'
+
 - name: Initialize TMux session
   command: tmux new-session -d
   args:
@@ -257,18 +269,6 @@
   register: source_result
   changed_when: source_result.rc == 0
   failed_when: false
-
-- name: Install Tmuxinator
-  gem:
-    name: tmuxinator
-    state: present
-    user_install: no
-
-- name: Create Tmuxinator config directory
-  file:
-    path: "{{ tmuxinator_config_path }}"
-    state: directory
-    mode: '0755'
 
 - name: Configure Tmuxinator
   copy:
