@@ -10,6 +10,11 @@
     - "/tmp/feroxbuster.zip"
     - "/tmp/go{{ go_version }}.linux-amd64.tar.gz"
     - "/tmp/pyenv-installer"
+    - "/tmp/amass.zip"
+    - "/tmp/amass_extract"
+    - "/tmp/assetfinder.tar.gz"
+    - "/tmp/gau.tar.gz"
+    - "/tmp/unfurl.tar.gz"
 
 # Cleanup temporary downloaded files
 - name: Remove temporary downloaded files

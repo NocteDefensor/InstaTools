@@ -47,6 +47,106 @@
         mode: '0755'
         state: file
   when: not feroxbuster_bin.stat.exists
+# Amass v3 Installation
+- name: Check if amass-v3 binary exists
+  stat:
+    path: "/usr/local/bin/amass-v3"
+  register: amass_bin
+
+- block:
+    - name: Download Amass v3.19.3
+      get_url:
+        url: "https://github.com/OWASP/Amass/releases/download/v3.19.3/amass_linux_amd64.zip"
+        dest: "/tmp/amass.zip"
+        mode: '0644'
+
+    - name: Create temporary directory for amass
+      file:
+        path: "/tmp/amass_extract"
+        state: directory
+        mode: '0755'
+
+    - name: Unzip Amass binary
+      unarchive:
+        src: "/tmp/amass.zip"
+        dest: "/tmp/amass_extract"
+        remote_src: yes
+
+    - name: Move amass binary to /usr/local/bin
+      copy:
+        src: "/tmp/amass_extract/amass_linux_amd64/amass"
+        dest: "/usr/local/bin/amass-v3"
+        mode: '0755'
+        remote_src: yes
+
+  when: not amass_bin.stat.exists
+
+# Assetfinder Installation
+- name: Check if assetfinder binary exists
+ stat:
+   path: "/usr/local/bin/assetfinder"
+ register: assetfinder_bin
+
+- block:
+   - name: Download Assetfinder v0.1.1
+     get_url:
+       url: "https://github.com/tomnomnom/assetfinder/releases/download/v0.1.1/assetfinder-linux-amd64-0.1.1.tgz"
+       dest: "/tmp/assetfinder.tar.gz"
+       mode: '0644'
+
+   - name: Extract assetfinder binary
+     unarchive:
+       src: "/tmp/assetfinder.tar.gz"
+       dest: "/usr/local/bin/"
+       remote_src: yes
+       mode: '0755'
+
+ when: not assetfinder_bin.stat.exists
+
+# Getallurls Installation
+- name: Check if getallurls binary exists
+ stat:
+   path: "/usr/local/bin/getallurls"
+ register: getallurls_bin
+
+- block:
+   - name: Download getallurls (gau) v2.1.1
+     get_url:
+       url: "https://github.com/lc/gau/releases/download/v2.1.1/gau_2.1.1_linux_amd64.tar.gz"
+       dest: "/tmp/gau.tar.gz"
+       mode: '0644'
+
+   - name: Extract and rename gau binary to getallurls
+     unarchive:
+       src: "/tmp/gau.tar.gz"
+       dest: "/usr/local/bin/"
+       remote_src: yes
+       extra_opts: ['--transform', 's/gau/getallurls/']
+       mode: '0755'
+
+ when: not getallurls_bin.stat.exists
+
+# Unfurl Installation
+- name: Check if unfurl binary exists
+ stat:
+   path: "/usr/local/bin/unfurl"
+ register: unfurl_bin
+
+- block:
+   - name: Download unfurl v0.4.1
+     get_url:
+       url: "https://github.com/tomnomnom/unfurl/releases/download/v0.4.1/unfurl-linux-amd64-0.4.1.tgz"
+       dest: "/tmp/unfurl.tar.gz"
+       mode: '0644'
+
+   - name: Extract unfurl binary
+     unarchive:
+       src: "/tmp/unfurl.tar.gz"
+       dest: "/usr/local/bin/"
+       remote_src: yes
+       mode: '0755'
+
+ when: not unfurl_bin.stat.exists
 
 # MassDNS
 - name: Check if massdns directory exists
@@ -149,7 +249,7 @@
     name: "{{ tools_dir }}/sstimap/requirements.txt"
     virtualenv: "{{ tools_dir }}/sstimap/venv"
     virtualenv_command: python3 -m venv
-    
+
 # porch-pirate    
 - name: Check if porch-pirate directory exists
   stat:
