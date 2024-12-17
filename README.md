@@ -38,7 +38,7 @@ Installs Go-based security tools:
 - FFuf for web fuzzing
 - Gowitness for web screenshots
 - TruffleHog for secret scanning
-- Aquatone for visual web inspection
+- Aquatone for web screenshots
 - Tag: `go_tools`
 
 ### pipx_tools
@@ -54,8 +54,13 @@ Various security tools:
 - MassDNS for DNS resolving
 - Hostess-Pie for host discovery
 - SQLMap for SQL injection testing
+- SSTIMap for SST Injection testing
 - Fast Google Dorks Scan (FGDS)
 - Trevor tools (trevorproxy, trevorspray)
+- Postleaks
+- Porch-Pirate
+- ntlmrecon
+- masscan
 - Tag: `misc_tools`
 
 ### metasploit

@@ -35,6 +35,7 @@
       - libpcap-dev
       - ruby
       - tmux
+      - masscan
     state: present
 
 - name: Install Chromium browser

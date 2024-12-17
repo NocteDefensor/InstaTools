@@ -109,7 +109,73 @@
     repo: "https://github.com/sqlmapproject/sqlmap.git"
     dest: "{{ tools_dir }}/sqlmap"
     version: master
-  when: not sqlmap_dir.stat.exists
+  when: not sqlmap_dir.stat.exists# SQLMap
+
+# NTLMRECON
+- name: Check if ntlmrecon directory exists
+  stat:
+    path: "{{ tools_dir }}/ntlmrecon"
+  register: ntlmrecon_dir
+
+- name: Clone ntlmrecon repository
+  git:
+    repo: "https://github.com/pwnfoo/NTLMRecon.git"
+    dest: "{{ tools_dir }}/ntlmrecon"
+    version: master
+  when: not ntlmrecon_dir.stat.exists
+
+- name: Setup ntlmrecon virtual environment
+  pip:
+    name: .
+    virtualenv: "{{ tools_dir }}/ntlmrecon/venv"
+    virtualenv_command: python3 -m venv
+
+# sstimap
+
+- name: Check if sstimap directory exists
+  stat:
+    path: "{{ tools_dir }}/sstimap"
+  register: sstimap_dir
+
+- name: Clone sstimap repository
+  git:
+    repo: "https://github.com/vladko312/SSTImap.git"
+    dest: "{{ tools_dir }}/sstimap"
+    version: master
+  when: not sstimap_dir.stat.exists
+
+- name: Setup sstimap virtual environment
+  pip:
+    name: "{{ tools_dir }}/sstimap/requirements.txt"
+    virtualenv: "{{ tools_dir }}/sstimap/venv"
+    virtualenv_command: python3 -m venv
+    
+# porch-pirate    
+- name: Check if porch-pirate directory exists
+  stat:
+    path: "{{ tools_dir }}/porch-pirate"
+  register: porch_pirate_dir
+
+- name: Setup porch-pirate virtual environment
+  pip:
+    name: porch-pirate
+    virtualenv: "{{ tools_dir }}/porch-pirate/venv"
+    virtualenv_command: python3 -m venv
+  when: not porch_pirate_dir.stat.exists
+
+# postleaks
+
+- name: Check if postleaks directory exists
+ stat:
+   path: "{{ tools_dir }}/postleaks"
+ register: postleaks_dir
+
+- name: Setup postleaks virtual environment
+ pip:
+   name: postleaks
+   virtualenv: "{{ tools_dir }}/postleaks/venv"
+   virtualenv_command: python3 -m venv
+ when: not postleaks_dir.stat.exists
 
 # FGDS (Fast Google Dorks Scan)
 - name: Check if FGDS directory exists
