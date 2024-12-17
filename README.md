@@ -53,6 +53,10 @@ Various security tools:
 - Feroxbuster for web content discovery
 - MassDNS for DNS resolving
 - Hostess-Pie for host discovery
+  - Amass v3 for subdomain enumeration
+  - Assetfinder for asset discovery
+  - GetAllURLs (gau) for URL extraction
+  - Unfurl for URL parsing
 - SQLMap for SQL injection testing
 - SSTIMap for SST Injection testing
 - Fast Google Dorks Scan (FGDS)
