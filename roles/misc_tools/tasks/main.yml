@@ -83,7 +83,7 @@
 
 # Assetfinder Installation
 - name: Check if assetfinder binary exists
- stat:
+  stat:
    path: "/usr/local/bin/assetfinder"
  register: assetfinder_bin
 
@@ -105,7 +105,7 @@
 
 # Getallurls Installation
 - name: Check if getallurls binary exists
- stat:
+  stat:
    path: "/usr/local/bin/getallurls"
  register: getallurls_bin
 
@@ -128,7 +128,7 @@
 
 # Unfurl Installation
 - name: Check if unfurl binary exists
- stat:
+  stat:
    path: "/usr/local/bin/unfurl"
  register: unfurl_bin
 
