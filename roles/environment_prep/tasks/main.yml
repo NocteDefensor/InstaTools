@@ -227,17 +227,6 @@
     dest: "{{ tpm_path }}"
     version: master
 
-- name: Install TMux plugins
-  command: /bin/bash {{ tpm_path }}/scripts/install_plugins.sh
-  args:
-    creates: "{{ tpm_path }}/tmux-logging"
-
-- name: Update logging path in variables.sh
-  replace:
-    path: "/root/.tmux/plugins/tmux-logging/scripts/variables.sh"
-    regexp: 'default_logging_path="\$HOME"'
-    replace: 'default_logging_path="{{ tmux_log_path }}"'
-
 - name: Configure TMux
   copy:
     dest: /root/.tmux.conf
@@ -258,6 +247,17 @@
       bind-key "%" split-window -h \; run-shell "{{ tpm_path }}/tmux-logging/scripts/toggle_logging.sh"
     mode: '0644'
 
+- name: Install TMux plugins
+  command: /bin/bash {{ tpm_path }}/scripts/install_plugins.sh
+  args:
+    creates: "{{ tpm_path }}/tmux-logging"
+    
+- name: Update logging path in variables.sh
+  replace:
+    path: "/root/.tmux/plugins/tmux-logging/scripts/variables.sh"
+    regexp: 'default_logging_path="\$HOME"'
+    replace: 'default_logging_path="{{ tmux_log_path }}"'
+    
 - name: Initialize TMux session
   command: tmux new-session -d
   args:
