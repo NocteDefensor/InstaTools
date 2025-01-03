@@ -266,16 +266,16 @@
 # postleaks
 
 - name: Check if postleaks directory exists
- stat:
+  stat:
    path: "{{ tools_dir }}/postleaks"
- register: postleaks_dir
+  register: postleaks_dir
 
 - name: Setup postleaks virtual environment
- pip:
+  pip:
    name: postleaks
    virtualenv: "{{ tools_dir }}/postleaks/venv"
    virtualenv_command: python3 -m venv
- when: not postleaks_dir.stat.exists
+  when: not postleaks_dir.stat.exists
 
 # FGDS (Fast Google Dorks Scan)
 - name: Check if FGDS directory exists
