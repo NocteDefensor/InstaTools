@@ -85,7 +85,7 @@
 - name: Check if assetfinder binary exists
   stat:
    path: "/usr/local/bin/assetfinder"
- register: assetfinder_bin
+  register: assetfinder_bin
 
 - block:
    - name: Download Assetfinder v0.1.1
@@ -107,7 +107,7 @@
 - name: Check if getallurls binary exists
   stat:
    path: "/usr/local/bin/getallurls"
- register: getallurls_bin
+  register: getallurls_bin
 
 - block:
    - name: Download getallurls (gau) v2.1.1
@@ -130,7 +130,7 @@
 - name: Check if unfurl binary exists
   stat:
    path: "/usr/local/bin/unfurl"
- register: unfurl_bin
+  register: unfurl_bin
 
 - block:
    - name: Download unfurl v0.4.1
