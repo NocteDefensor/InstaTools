@@ -226,7 +226,7 @@
 
 - name: Setup ntlmrecon virtual environment
   pip:
-    name: .
+    name: "{{ tools_dir }}/ntlmrecon"
     virtualenv: "{{ tools_dir }}/ntlmrecon/venv"
     virtualenv_command: python3 -m venv
 
