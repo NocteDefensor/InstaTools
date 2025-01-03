@@ -246,7 +246,7 @@
 
 - name: Setup sstimap virtual environment
   pip:
-    name: "{{ tools_dir }}/sstimap/requirements.txt"
+    requirements: "{{ tools_dir }}/sstimap/requirements.txt"
     virtualenv: "{{ tools_dir }}/sstimap/venv"
     virtualenv_command: python3 -m venv
 
