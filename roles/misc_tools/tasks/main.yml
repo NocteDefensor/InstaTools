@@ -209,7 +209,7 @@
     repo: "https://github.com/sqlmapproject/sqlmap.git"
     dest: "{{ tools_dir }}/sqlmap"
     version: master
-  when: not sqlmap_dir.stat.exists# SQLMap
+  when: not sqlmap_dir.stat.exists
 
 # NTLMRECON
 - name: Check if ntlmrecon directory exists
