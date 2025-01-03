@@ -101,7 +101,7 @@
        remote_src: yes
        mode: '0755'
 
- when: not assetfinder_bin.stat.exists
+  when: not assetfinder_bin.stat.exists
 
 # Getallurls Installation
 - name: Check if getallurls binary exists
@@ -124,7 +124,7 @@
        extra_opts: ['--transform', 's/gau/getallurls/']
        mode: '0755'
 
- when: not getallurls_bin.stat.exists
+  when: not getallurls_bin.stat.exists
 
 # Unfurl Installation
 - name: Check if unfurl binary exists
@@ -146,7 +146,7 @@
        remote_src: yes
        mode: '0755'
 
- when: not unfurl_bin.stat.exists
+  when: not unfurl_bin.stat.exists
 
 # MassDNS
 - name: Check if massdns directory exists
